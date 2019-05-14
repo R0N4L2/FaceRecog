@@ -6,6 +6,7 @@ import os
 import gc
 import pandas as pd
 import numpy as np
+import shutil
 from os.path import dirname, abspath, join, exists
 """SE CONECTA A IMDB PARA OBTENER FOTOS DE VARIOS ARTISTAS POR NOMBRE Y GENERO"""
 GENERO=["female","male"]
@@ -33,7 +34,8 @@ for gen in GENERO:
         A[3]=A[3].str.split('"',expand=True)[1]
         A=A.reset_index(drop=True)
         for k in range(A.shape[0]):
-            f = open(di1+A[1].iloc[k].replace(" ","_")+'.jpg','wb')
-            r = http.request('GET',A[3].iloc[k])
-            f.write(r.content)
-            f.close()
+            filename=di1+A[1].iloc[k].replace(" ","_")+'.jpg'
+            url=A[3].iloc[k]
+            with http.request('GET',url, preload_content=False) as resp, open(filename, 'wb') as out_file:
+                shutil.copyfileobj(resp, out_file)
+            resp.release_conn()
