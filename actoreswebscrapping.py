@@ -89,7 +89,10 @@ for gen in GENERO:
                     ultima=True
                     S=S[P>0].reset_index(drop=True)
                     S=S.str.split('"',expand=True)[5]
-                    aa=np.random.randint(S.shape[0], size=siz).tolist()
+                    if siz<S.shape[0]:
+                        aa=np.random.randint(S.shape[0], size=siz).tolist()
+                    else:
+                        aa=range(S.shape[0])
                     for g,h in enumerate(S.iloc[aa]):
                         with http.request('GET',h, preload_content=False) as resp, open(filename+'_lastyear_'+str(g)+'.jpg', 'wb') as out_file:
                             shutil.copyfileobj(resp, out_file)
