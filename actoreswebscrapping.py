@@ -1,5 +1,4 @@
 import urllib3
-import json
 import datetime
 import humanfriendly
 from datetime import timedelta
@@ -13,9 +12,33 @@ from os.path import dirname, abspath, join, exists
 import pickle
 
 def writePickle(df,fileName):
-	with open(os.path.join(relPathToDatos,fileName), 'wb') as f:
+	with open(fileName, 'wb') as f:
 		pickle.dump(df, f, pickle.HIGHEST_PROTOCOL)
-
+def web4photo(web,fileName):
+    http = urllib3.PoolManager()
+    with http.request('GET',web, preload_content=False) as resp, open(fileName, 'wb') as out_file:
+        shutil.copyfileobj(resp, out_file)
+    resp.release_conn()
+def writeCSV(df,fileName,useIndex = False):
+	df.to_csv(fileName,index=useIndex)	
+def writeExcel(df,fileName,useIndex = False):
+	df.to_excel(fileName,index=useIndex)
+def writeFile(df,filName,useIndex = False):
+	if fileName.endswith('.csv'):
+		writeCSV(df,fileName,useIndex = useIndex)
+	if fileName.endswith('.xlsx'):
+		writeExcel(df,filename,useIndex = useIndex)
+	if fileName.endsWith('.pickle'):
+		writePickle(df,fileName)   
+def readFile(fileName):
+	if fileName.endswith('.csv'):
+		return pandas.read_csv(fileName)
+	if fileName.endswith('.xlsx'):
+		return pandas.read_excel(fileName)
+	if fileName.endsWith('.pickle'):
+		with open(fileName, 'rb') as f:
+			return pickle.load(f)
+    
 """SE CONECTA A IMDB PARA OBTENER FOTOS DE VARIOS ARTISTAS POR NOMBRE Y GENERO"""
 GENERO=["female","male"]
 http = urllib3.PoolManager()
@@ -50,9 +73,7 @@ for gen in GENERO:
             url=A[3].iloc[k]
             if url.find("nopicture")<0:
                 n=int(url.find("nopicture")<0)
-                with http.request('GET',url, preload_content=False) as resp, open(filename+'.jpg', 'wb') as out_file:
-                    shutil.copyfileobj(resp, out_file)
-                resp.release_conn()
+                web4photo(url,filename+'.jpg')
             response =http.request('GET',wiki+A[1].iloc[k].replace(" ","_"))
             soup = BeautifulSoup(response.data)
             dt=pd.Series(soup.find_all("tbody"))
@@ -84,9 +105,7 @@ for gen in GENERO:
                         aa1=aa1[ss]                        
                     for g,h in enumerate(aa1):                
                         im2+=[g+n]
-                        with http.request('GET',h, preload_content=False) as resp, open(filename+'_'+str(g+n)+'.jpg', 'wb') as out_file:
-                            shutil.copyfileobj(resp, out_file)
-                        resp.release_conn()
+                        web4photo(h,filename+'_'+str(g+n)+'.jpg')
             #Photography of last year
             response =http.request('GET',"https://www.gettyimages.es/fotos/{}?compositions=headshot&family=editorial&numberofpeople=one&recency=last12months&sort=best".format(A[1].iloc[k].lower().replace(" ","_")))
             soup = BeautifulSoup(response.data)
@@ -105,9 +124,7 @@ for gen in GENERO:
                     else:
                         aa=range(S.shape[0])
                     for g,h in enumerate(S.iloc[aa]):
-                        with http.request('GET',h, preload_content=False) as resp, open(filename+'_lastyear_'+str(g)+'.jpg', 'wb') as out_file:
-                            shutil.copyfileobj(resp, out_file)
-                        resp.release_conn()
+                        web4photo(h,filename+'_lastyear_'+str(g)+'.jpg')
             if n>0:
                 name=A[1].iloc[k]
                 bday=str(s2.find_all("span")[1]).split('"bday">')[1].split("</span>")[0]
@@ -128,4 +145,4 @@ for gen in GENERO:
                     start=False
                 else:
                     DFR=DFR.append(S)                
-writePickle(DFR,di+'FaceRecognition.pickle')
+writeFile(DFR,di+'FaceRecognition.pickle')
