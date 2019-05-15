@@ -22,7 +22,8 @@ http = urllib3.PoolManager()
 di = join(dirname(abspath('')),'imagenes\\')
 wiki="https://en.wikipedia.org/wiki/"
 start=True
-siz=1
+print('Ingrese la cantidad de fotos que quiere rescatar:')
+photosTotal=int(input())
 if not exists(di):
     os.mkdir(di)
 for gen in GENERO:
@@ -71,6 +72,14 @@ for gen in GENERO:
                     aa1=pd.Series(list(set(aa1.values.reshape(aa1.size).tolist())-{None}))
                     ss=aa1.str.find(".jpg/")
                     aa1='https:'+pd.unique(aa1[ss>0].str.split('.jpg/',expand=True)[0])+'.jpg'
+                    if len(aa1)>photosTotal:
+                        ss=[]
+                        l=0
+                        while (len(ss)<photosTotal) and (l<photosTotal):
+                            ss1=pd.unique(np.random.randint(len(aa1),size=photosTotal)).tolist()
+                            ss=list(set(ss+ss1))
+                            l+=1
+                        aa1=aa1[ss]                        
                     for g,h in enumerate(aa1):                
                         im2+=[g+n]
                         with http.request('GET',h, preload_content=False) as resp, open(filename+'_'+str(g+n)+'.jpg', 'wb') as out_file:
@@ -89,8 +98,8 @@ for gen in GENERO:
                     ultima=True
                     S=S[P>0].reset_index(drop=True)
                     S=S.str.split('"',expand=True)[5]
-                    if siz<S.shape[0]:
-                        aa=np.random.randint(S.shape[0], size=siz).tolist()
+                    if photosTotal<S.shape[0]:
+                        aa=pd.unique(np.random.randint(S.shape[0],size=photosTotal)).tolist()
                     else:
                         aa=range(S.shape[0])
                     for g,h in enumerate(S.iloc[aa]):
