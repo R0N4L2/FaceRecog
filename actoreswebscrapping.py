@@ -79,6 +79,8 @@ for gen in GENERO:
                             ss1=pd.unique(np.random.randint(len(aa1),size=photosTotal)).tolist()
                             ss=list(set(ss+ss1))
                             l+=1
+                        if len(ss)>photosTotal:
+                            ss=range(photosTotal-1)
                         aa1=aa1[ss]                        
                     for g,h in enumerate(aa1):                
                         im2+=[g+n]
@@ -90,7 +92,7 @@ for gen in GENERO:
             soup = BeautifulSoup(response.data)
             s3=soup.find_all("img")
             ultima=False
-            if s3>0:
+            if len(s3)>0:
                 S=pd.Series(s3).astype(str)
                 P=S.str.find(A[1].iloc[k])
                 if any(P>0):
@@ -114,8 +116,8 @@ for gen in GENERO:
                 dic={'Nombre':[name],"genero":[gen],"Nacimiento":[bday],"Edad":[old]}
                 if url.find("nopicture")<0:
                     dic.update({"img1":[filename+'.jpg']})
-                if len(img2)>0:
-                    for g in img2:
+                if len(im2)>0:
+                    for g in im2:
                         dic.update({"img"+str(k):[filename+'_'+str(g)+'.jpg']})
                 if ultima:
                     for g in range(len(aa)):
