@@ -51,7 +51,7 @@ def readFile(file_name):
 			return pickle.load(f)
 
 def changeFormat(x):
-    return [x.lower().replace(" ","_"),x.replace(" ","%20"),x.lower().replace(" ","%20"),x.replace(" ","_"),x.replace(" ",""),x.lower().replace(" ",""),x,x.lower()]   
+    return [x.lower().replace(" ","_"),x.replace(" ","%20"),x.lower().replace(" ","%20"),x.replace(" ","_"),x.replace(" ",""),x.lower().replace(" ",""),x,x.lower(),x.replace(" ","-"),x.lower().replace(" ","-")]+x.split(" ")+x.lower().split(" ")   
 """SE CONECTA A IMDB PARA OBTENER FOTOS DE VARIOS ARTISTAS POR NOMBRE Y GENERO"""
 GENERO=["female","male"]
 http = urllib3.PoolManager()
@@ -118,16 +118,26 @@ for gen in GENERO:
                 url_gettyimages="https://www.gettyimages.com/photos/{n[0]}?compositions=headshot&family=editorial&numberofpeople=one&phrase={n[1]}&recency=last12months&sort=newest".format(n=changeFormat(name))
                 response =http.request('GET',url_gettyimages)
                 soup = BeautifulSoup(response.data)
+                if len(soup.find_all("main"))>0:
+                    a=pd.Series(soup.find_all("main")).astype(str).iloc[0]
+                    id_actor=int(a[a.find("keyword_ids"):a.find("keyword_ids")+30].split("[")[1].split("]")[0])
+                    url_gettyimages="https://www.gettyimages.com/photos/{n[0]}?compositions=headshot&family=editorial&numberofpeople=one&phrase={n[1]}&recency=last12months&sort=newest&specificpeople={n[2]}&page=1&suppressfamilycorrection=true#license".format(n=changeFormat(name)[:2]+[id_actor])
+                    response =http.request('GET',url_gettyimages)
+                    soup = BeautifulSoup(response.data)                
                 s3=soup.find_all("img")
                 ultima=False
                 if len(s3)>0:
                     S=pd.Series(s3).astype(str)
+                    S=S[S.str.find("src")>0]
                     Q=[S.str.find(j).values>0 for j in changeFormat(name)]
                     if np.any(Q):
                         n+=1
                         ultima=True
                         S=S[np.any(Q,axis=0)].reset_index(drop=True)
-                        S=S.str.split('"',expand=True)[5]
+                        S=S.str.split('"',expand=True).astype(str)[5]
+                        Q=[S.str.find(j).values>0 for j in changeFormat(name)]
+                        if np.any(Q):
+                            S=S[np.any(Q,axis=0)].reset_index(drop=True)
                         if photos_totales<S.shape[0]:
                             aa=np.random.permutation(S.shape[0]).tolist()[:photos_totales]
                         else:
@@ -137,10 +147,10 @@ for gen in GENERO:
                 if n>0:
                     nombre=A[1].iloc[k]
                     s2=pd.Series(s2.find_all("span")).astype(str)
-                    bday=s2[s2.str.find("bday")>0].iloc[0].split('"bday">')[1].split("</span>")[0]
-                    edad=humanfriendly.format_timespan(datetime.datetime.today()-datetime.datetime.strptime(bday, '%Y-%m-%d'),max_units=1)
+                    fecha_nacimiento=s2[s2.str.find("bday")>0].iloc[0].split('"bday">')[1].split("</span>")[0]
+                    edad=humanfriendly.format_timespan(datetime.datetime.today()-datetime.datetime.strptime(fecha_nacimiento, '%Y-%m-%d'),max_units=1)
                     edad=int(edad.split(" ")[0])
-                    dic={'Nombre':[nombre],"genero":[gen],"Nacimiento":[bday],"Edad":[edad]}
+                    dic={'Nombre':[nombre],"genero":[gen],"Nacimiento":[fecha_nacimiento],"Edad":[edad]}
                     if url_photo.find("nopicture")<0:
                         dic.update({"img1":[file_name+'.jpg']})
                     if len(im2)>0:
