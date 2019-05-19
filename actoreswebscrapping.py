@@ -11,14 +11,25 @@ import shutil
 from os.path import dirname, abspath, join, exists
 import pickle
 import unidecode
+import time
+try:
+    from urllib.request import urlretrieve  # Python 3
+except ImportError:
+    from urllib import urlretrieve  # Python 2
+
 def writePickle(df,file_name):
 	with open(file_name, 'wb') as f:
 		pickle.dump(df, f, pickle.HIGHEST_PROTOCOL)
 def web4photo(web,file_name):
-    http = urllib3.PoolManager()
-    with http.request('GET',web, preload_content=False) as resp, open(file_name, 'wb') as out_file:
-        shutil.copyfileobj(resp, out_file)
-    resp.release_conn()
+    time.sleep(1)
+    try: 
+        urlretrieve(web,file_name)
+    except:
+        time.sleep(1)
+        http = urllib3.PoolManager()
+        with http.request('GET',web, preload_content=False) as resp, open(file_name, 'wb') as out_file:
+            shutil.copyfileobj(resp, out_file)
+        resp.release_conn()
 def writeCSV(df,file_name,useIndex = False):
 	df.to_csv(file_name,index=useIndex)	
 def writeExcel(df,file_name,useIndex = False):
@@ -40,7 +51,7 @@ def readFile(file_name):
 			return pickle.load(f)
 
 def changeFormat(x):
-    return [x.lower().replace(" ","_"),x.replace(" ","%20")]   
+    return [x.lower().replace(" ","_"),x.replace(" ","%20"),x.lower().replace(" ","%20"),x.replace(" ","_"),x.replace(" ",""),x.lower().replace(" ",""),x,x.lower()]   
 """SE CONECTA A IMDB PARA OBTENER FOTOS DE VARIOS ARTISTAS POR NOMBRE Y GENERO"""
 GENERO=["female","male"]
 http = urllib3.PoolManager()
@@ -111,11 +122,11 @@ for gen in GENERO:
                 ultima=False
                 if len(s3)>0:
                     S=pd.Series(s3).astype(str)
-                    P=S.str.find(name)
-                    if any(P>0):
+                    Q=[S.str.find(j).values>0 for j in changeFormat(name)]
+                    if np.any(Q):
                         n+=1
                         ultima=True
-                        S=S[P>0].reset_index(drop=True)
+                        S=S[np.any(Q,axis=0)].reset_index(drop=True)
                         S=S.str.split('"',expand=True)[5]
                         if photos_totales<S.shape[0]:
                             aa=np.random.permutation(S.shape[0]).tolist()[:photos_totales]
